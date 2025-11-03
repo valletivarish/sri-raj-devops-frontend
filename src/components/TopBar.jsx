@@ -20,6 +20,7 @@ export default function TopBar() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loggingIn, setLoggingIn] = useState(false)
+  const [loginErrors, setLoginErrors] = useState({})
   
   const filtered = useMemo(() => users.filter(u => `${u.name} ${u.email}`.toLowerCase().includes(query.toLowerCase())), [users, query])
   const nonAdminFiltered = useMemo(() => filtered.filter(u => !(u.roles||[]).some(r => r.name === 'ROLE_ADMIN') && u.email !== 'admin@lostfound.com'), [filtered])
@@ -97,11 +98,36 @@ export default function TopBar() {
     }
   }, [])
 
+  function validateLogin() {
+    const newErrors = {}
+    
+    if (!email || !email.trim()) {
+      newErrors.email = 'Username or email is required'
+    } else if (email.trim().length < 3 || email.trim().length > 100) {
+      newErrors.email = 'Username or email must be between 3 and 100 characters'
+    }
+    
+    if (!password || !password.trim()) {
+      newErrors.password = 'Password is required'
+    } else if (password.length < 6 || password.length > 100) {
+      newErrors.password = 'Password must be between 6 and 100 characters'
+    }
+    
+    setLoginErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   async function handleProductionLogin(e) {
     e.preventDefault()
+    
+    if (!validateLogin()) {
+      toast.error('Please fix validation errors')
+      return
+    }
+    
     setLoggingIn(true)
     try {
-      const auth = await login({ usernameOrEmail: email, password })
+      const auth = await login({ usernameOrEmail: email.trim(), password })
       setToken(auth.accessToken)
       setApiToken(auth.accessToken)
       
@@ -110,12 +136,22 @@ export default function TopBar() {
       setLoginOpen(false)
       setEmail('')
       setPassword('')
+      setLoginErrors({})
       toast.success('Login successful')
       
       const isAdmin = (userInfo.roles || []).some(r => r.name === 'ROLE_ADMIN')
       navigate(isAdmin ? '/admin/dashboard' : '/user/dashboard')
     } catch (e) {
-      toast.error('Login failed')
+      if (e.response?.data?.errors) {
+        const validationErrors = {}
+        e.response.data.errors.forEach(error => {
+          validationErrors[error.field] = error.message
+        })
+        setLoginErrors(validationErrors)
+        toast.error('Please fix validation errors')
+      } else {
+        toast.error(e.response?.data?.message || 'Login failed')
+      }
       console.error('Login failed', e)
     } finally {
       setLoggingIn(false)
@@ -204,35 +240,74 @@ export default function TopBar() {
       </div>
 
       {/* Production Login Modal */}
-      <Modal open={loginOpen} onClose={() => setLoginOpen(false)} title="Login">
+      <Modal open={loginOpen} onClose={() => {setLoginOpen(false); setLoginErrors({})}} title="Login">
         <form onSubmit={handleProductionLogin} className="grid" style={{gap:12}}>
           <div>
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">Username or Email *</label>
             <input 
               id="email"
-              type="email"
-              className="input" 
+              type="text"
+              className={`input ${loginErrors.email || loginErrors.usernameOrEmail ? 'error' : ''}`}
               value={email} 
-              onChange={e=>setEmail(e.target.value)}
-              placeholder="user@example.com"
-              required
+              onChange={e=>{
+                setEmail(e.target.value)
+                if (loginErrors.email || loginErrors.usernameOrEmail) {
+                  setLoginErrors({})
+                }
+              }}
+              placeholder="username or user@example.com"
+              maxLength={100}
             />
+            {(loginErrors.email || loginErrors.usernameOrEmail) && (
+              <div style={{color: 'var(--accent)', fontSize: '14px', marginTop: '4px'}}>
+                {loginErrors.email || loginErrors.usernameOrEmail}
+              </div>
+            )}
+            <div style={{color: 'var(--muted)', fontSize: '12px', marginTop: '4px'}}>3-100 characters</div>
           </div>
           <div>
-            <label htmlFor="password">Password</label>
+            <label htmlFor="password">Password *</label>
             <input 
               id="password"
               type="password"
-              className="input" 
+              className={`input ${loginErrors.password ? 'error' : ''}`}
               value={password} 
-              onChange={e=>setPassword(e.target.value)}
+              onChange={e=>{
+                setPassword(e.target.value)
+                if (loginErrors.password) {
+                  setLoginErrors(prev => {
+                    const newErrors = { ...prev }
+                    delete newErrors.password
+                    return newErrors
+                  })
+                }
+              }}
               placeholder="Enter password"
-              required
+              maxLength={100}
             />
+            {loginErrors.password && (
+              <div style={{color: 'var(--accent)', fontSize: '14px', marginTop: '4px'}}>{loginErrors.password}</div>
+            )}
+            <div style={{color: 'var(--muted)', fontSize: '12px', marginTop: '4px'}}>6-100 characters</div>
           </div>
           <div className="row">
-            <button className="btn" type="submit" disabled={loggingIn}>{loggingIn ? 'Logging in...' : 'Login'}</button>
-            <button className="btn muted" type="button" onClick={()=>setLoginOpen(false)}>Cancel</button>
+            <button 
+              className="btn" 
+              type="submit" 
+              disabled={loggingIn || Object.keys(loginErrors).length > 0}
+            >
+              {loggingIn ? 'Logging in...' : 'Login'}
+            </button>
+            <button 
+              className="btn muted" 
+              type="button" 
+              onClick={()=>{
+                setLoginOpen(false)
+                setLoginErrors({})
+              }}
+            >
+              Cancel
+            </button>
           </div>
         </form>
       </Modal>

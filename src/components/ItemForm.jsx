@@ -6,8 +6,69 @@ export default function ItemForm({ onCreated }) {
   const [form, setForm] = useState({ title:'', description:'', type:'LOST', tags:'', location:'' })
   const [files, setFiles] = useState([])
   const [uploading, setUploading] = useState(false)
+  const [errors, setErrors] = useState({})
 
-  function onChange(e) { setForm(prev => ({...prev, [e.target.name]: e.target.value})) }
+  function onChange(e) { 
+    const { name, value } = e.target
+    setForm(prev => ({...prev, [name]: value}))
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[name]
+        return newErrors
+      })
+    }
+  }
+
+  function validateForm() {
+    const newErrors = {}
+    
+    if (!form.title || !form.title.trim()) {
+      newErrors.title = 'Title is required'
+    } else if (form.title.trim().length < 1 || form.title.trim().length > 200) {
+      newErrors.title = 'Title must be between 1 and 200 characters'
+    }
+    
+    if (form.description && form.description.length > 2000) {
+      newErrors.description = 'Description must not exceed 2000 characters'
+    }
+    
+    if (!form.type) {
+      newErrors.type = 'Type is required'
+    } else if (!['LOST', 'FOUND'].includes(form.type)) {
+      newErrors.type = 'Type must be either LOST or FOUND'
+    }
+    
+    if (form.tags && form.tags.length > 500) {
+      newErrors.tags = 'Tags must not exceed 500 characters'
+    }
+    
+    if (form.location && form.location.length > 200) {
+      newErrors.location = 'Location must not exceed 200 characters'
+    }
+    
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  function validateFiles() {
+    if (files.length === 0) return true
+    
+    const maxFileSize = 5 * 1024 * 1024 // 5MB
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+    
+    for (const file of files) {
+      if (file.size > maxFileSize) {
+        toast.error(`File "${file.name}" exceeds maximum size of 5MB`)
+        return false
+      }
+      if (!allowedTypes.includes(file.type)) {
+        toast.error(`File "${file.name}" must be an image (JPEG, PNG, GIF, or WebP)`)
+        return false
+      }
+    }
+    return true
+  }
 
   function renameFile(file, title, index, total) {
     if (!title || !title.trim()) {
@@ -42,9 +103,26 @@ export default function ItemForm({ onCreated }) {
 
   async function onSubmit(e) {
     e.preventDefault()
+    
+    if (!validateForm()) {
+      toast.error('Please fix validation errors')
+      return
+    }
+    
+    if (!validateFiles()) {
+      return
+    }
+    
     try {
       setUploading(true)
-      const created = await createItem(form)
+      const itemData = {
+        title: form.title.trim(),
+        description: form.description ? form.description.trim() : null,
+        type: form.type,
+        tags: form.tags ? form.tags.trim() : null,
+        location: form.location ? form.location.trim() : null
+      }
+      const created = await createItem(itemData)
       
       if (files.length > 0) {
         const renamedFiles = files.map((file, index) => 
@@ -62,7 +140,16 @@ export default function ItemForm({ onCreated }) {
       setUploading(false)
     } catch (err) {
       setUploading(false)
-      toast.error('Failed to create item')
+      if (err.response?.data?.errors) {
+        const validationErrors = {}
+        err.response.data.errors.forEach(error => {
+          validationErrors[error.field] = error.message
+        })
+        setErrors(validationErrors)
+        toast.error('Please fix validation errors')
+      } else {
+        toast.error(err.response?.data?.message || 'Failed to create item')
+      }
       console.error(err)
     }
   }
@@ -70,12 +157,31 @@ export default function ItemForm({ onCreated }) {
   return (
     <form className="grid" onSubmit={onSubmit}>
       <div>
-        <label htmlFor="title">Title</label>
-        <input id="title" name="title" className="input" value={form.title} onChange={onChange} required />
+        <label htmlFor="title">Title *</label>
+        <input 
+          id="title" 
+          name="title" 
+          className={`input ${errors.title ? 'error' : ''}`} 
+          value={form.title} 
+          onChange={onChange}
+          maxLength={200}
+        />
+        {errors.title && <div style={{color: 'var(--accent)', fontSize: '14px', marginTop: '4px'}}>{errors.title}</div>}
+        <div style={{color: 'var(--muted)', fontSize: '12px', marginTop: '4px'}}>1-200 characters</div>
       </div>
       <div>
         <label htmlFor="description">Description</label>
-        <textarea id="description" name="description" className="input" value={form.description} onChange={onChange} rows={4} />
+        <textarea 
+          id="description" 
+          name="description" 
+          className={`input ${errors.description ? 'error' : ''}`} 
+          value={form.description} 
+          onChange={onChange} 
+          rows={4}
+          maxLength={2000}
+        />
+        {errors.description && <div style={{color: 'var(--accent)', fontSize: '14px', marginTop: '4px'}}>{errors.description}</div>}
+        <div style={{color: 'var(--muted)', fontSize: '12px', marginTop: '4px'}}>Max 2000 characters</div>
       </div>
       <div className="row">
         <div style={{flex:1}}>
@@ -87,26 +193,52 @@ export default function ItemForm({ onCreated }) {
         </div>
         <div style={{flex:2}}>
           <label htmlFor="tags">Tags (comma separated)</label>
-          <input id="tags" name="tags" className="input" value={form.tags} onChange={onChange} placeholder="wallet,black" />
+          <input 
+            id="tags" 
+            name="tags" 
+            className={`input ${errors.tags ? 'error' : ''}`} 
+            value={form.tags} 
+            onChange={onChange} 
+            placeholder="wallet,black"
+            maxLength={500}
+          />
+          {errors.tags && <div style={{color: 'var(--accent)', fontSize: '14px', marginTop: '4px'}}>{errors.tags}</div>}
+          <div style={{color: 'var(--muted)', fontSize: '12px', marginTop: '4px'}}>Max 500 characters</div>
         </div>
       </div>
       <div>
         <label htmlFor="location">Location</label>
-        <input id="location" name="location" className="input" value={form.location} onChange={onChange} />
+        <input 
+          id="location" 
+          name="location" 
+          className={`input ${errors.location ? 'error' : ''}`} 
+          value={form.location} 
+          onChange={onChange}
+          maxLength={200}
+        />
+        {errors.location && <div style={{color: 'var(--accent)', fontSize: '14px', marginTop: '4px'}}>{errors.location}</div>}
+        <div style={{color: 'var(--muted)', fontSize: '12px', marginTop: '4px'}}>Max 200 characters</div>
       </div>
       <div>
         <label htmlFor="images">Images</label>
         <input 
           id="images"
           type="file" 
-          accept="image/*" 
+          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" 
           multiple 
           className="input"
           onChange={(e)=> setFiles(Array.from(e.target.files||[]))} 
         />
+        <div style={{color: 'var(--muted)', fontSize: '12px', marginTop: '4px'}}>JPEG, PNG, GIF, or WebP. Max 5MB per file</div>
       </div>
       <div className="row">
-        <button className="btn" disabled={uploading} type="submit">{uploading ? 'Uploading…' : 'Create'}</button>
+        <button 
+          className="btn" 
+          disabled={uploading || Object.keys(errors).length > 0} 
+          type="submit"
+        >
+          {uploading ? 'Uploading…' : 'Create'}
+        </button>
       </div>
     </form>
   )
