@@ -30,17 +30,17 @@ phases:
 
   build:
     commands:
-    - chmod +x node_modules/.bin/vite
-    - echo "Building frontend..."
-    - npm run build
+      - chmod +x node_modules/.bin/vite
+      - echo "Building frontend..."
+      - npm run build
 
   post_build:
     commands:
       - echo "Uploading to S3"
-      - aws s3 sync dist/ s3://lostfound-frontend-static/ --delete
-
-      - echo "Invalidating CloudFront cache"
-      - aws cloudfront create-invalidation --distribution-id E2S9ZKJR0HFLPS --paths "/*"
+      # 1) push all static assets with long cache
+      - aws s3 sync dist/ s3://lostfound-frontend-static/ --delete --exclude "index.html" --cache-control "public,max-age=31536000,immutable"
+      # 2) upload index.html with short cache so updates go live quickly
+      - aws s3 cp dist/index.html s3://lostfound-frontend-static/index.html --cache-control "no-cache"
 
 artifacts:
   files:
