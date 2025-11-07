@@ -30,7 +30,6 @@ phases:
 
   build:
     commands:
-      - echo "Building Vite React app with API base URL: $VITE_API_BASE_URL"
       - npm run build
 
   post_build:
