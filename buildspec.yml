@@ -10,8 +10,19 @@ phases:
 
   pre_build:
     commands:
-      - echo "Running npm security audit..."
+      - echo "Running npm audit (security scan)..."
       - npm audit --audit-level=high
+
+      - echo "Installing Trivy on Ubuntu CodeBuild environment..."
+      - apt-get update -y
+      - apt-get install wget apt-transport-https gnupg lsb-release -y
+      - wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor -o /usr/share/keyrings/trivy.gpg
+      - echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | tee /etc/apt/sources.list.d/trivy.list
+      - apt-get update -y
+      - apt-get install trivy -y
+
+      - echo "Running Trivy filesystem scan for HIGH and CRITICAL vulnerabilities..."
+      - trivy fs --severity HIGH,CRITICAL --exit-code 1 --no-progress .
 
   build:
     commands:
@@ -20,8 +31,9 @@ phases:
 
   post_build:
     commands:
-      - echo "Deploying to S3..."
+      - echo "Deploying build output to S3..."
       - aws s3 sync ./dist s3://lostfound-frontend-static/ --delete
+
       - echo "Invalidating CloudFront cache..."
       - aws cloudfront create-invalidation --distribution-id E2S9ZKJR0HFLPS --paths "/*"
 
