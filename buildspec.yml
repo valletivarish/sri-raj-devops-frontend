@@ -30,8 +30,9 @@ phases:
 
   build:
     commands:
-      - echo "Building frontend"
-      - npm run build
+    - chmod +x node_modules/.bin/vite
+    - echo "Building frontend..."
+    - npm run build
 
   post_build:
     commands:
