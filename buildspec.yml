@@ -1,0 +1,30 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 18
+    commands:
+      - echo "Installing dependencies..."
+      - npm install
+
+  pre_build:
+    commands:
+      - echo "Running npm security audit..."
+      - npm audit --audit-level=high
+
+  build:
+    commands:
+      - echo "Building React application..."
+      - npm run build
+
+  post_build:
+    commands:
+      - echo "Deploying to S3..."
+      - aws s3 sync ./dist s3://lostfound-frontend-static/ --delete
+      - echo "Invalidating CloudFront cache..."
+      - aws cloudfront create-invalidation --distribution-id E2S9ZKJR0HFLPS --paths "/*"
+
+artifacts:
+  files:
+    - '**/*'
