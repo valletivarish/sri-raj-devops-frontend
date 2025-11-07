@@ -30,7 +30,8 @@ phases:
 
   build:
     commands:
-      - npm run build
+      - echo "Building frontend with Vite..."
+      - npx vite build
 
   post_build:
     commands:
