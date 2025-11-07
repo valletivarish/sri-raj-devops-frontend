@@ -1,11 +1,15 @@
 version: 0.2
 
+env:
+  variables:
+    VITE_API_BASE_URL: "http://3.250.176.22:8080"
+
 phases:
   install:
     runtime-versions:
       nodejs: 18
     commands:
-      - echo "Installing dependencies..."
+      - echo "Installing npm dependencies..."
       - npm install
 
   pre_build:
@@ -13,7 +17,7 @@ phases:
       - echo "Running npm audit (security scan)..."
       - npm audit --audit-level=high
 
-      - echo "Installing Trivy on Ubuntu CodeBuild environment..."
+      - echo "Installing Trivy on Ubuntu environment..."
       - apt-get update -y
       - apt-get install wget apt-transport-https gnupg lsb-release -y
       - wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor -o /usr/share/keyrings/trivy.gpg
@@ -21,17 +25,17 @@ phases:
       - apt-get update -y
       - apt-get install trivy -y
 
-      - echo "Running Trivy filesystem scan for HIGH and CRITICAL vulnerabilities..."
+      - echo "Running Trivy filesystem vulnerability scan (HIGH/CRITICAL)..."
       - trivy fs --severity HIGH,CRITICAL --exit-code 1 --no-progress .
 
   build:
     commands:
-      - echo "Building React application..."
+      - echo "Building Vite React app with API base URL: $VITE_API_BASE_URL"
       - npm run build
 
   post_build:
     commands:
-      - echo "Deploying build output to S3..."
+      - echo "Deploying frontend to S3..."
       - aws s3 sync ./dist s3://lostfound-frontend-static/ --delete
 
       - echo "Invalidating CloudFront cache..."
