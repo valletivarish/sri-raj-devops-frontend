@@ -1,9 +1,5 @@
 version: 0.2
 
-env:
-  variables:
-    VITE_API_BASE_URL: "http://3.250.176.22:8080"
-
 phases:
   install:
     runtime-versions:
@@ -14,12 +10,15 @@ phases:
 
   pre_build:
     commands:
+      - echo "Fetching API URL from Secrets Manager"
+      - export VITE_API_BASE_URL=$(aws secretsmanager get-secret-value --region eu-west-1 --secret-id lostfound/env --query SecretString --output text | jq -r '. | fromjson | .API_BASE_URL')
+      
       - echo "Running npm audit"
       - npm audit --audit-level=high || true
 
       - echo "Installing Trivy"
       - apt-get update -y
-      - apt-get install wget apt-transport-https gnupg lsb-release -y
+      - apt-get install wget apt-transport-https gnupg lsb-release jq -y
       - wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor -o /usr/share/keyrings/trivy.gpg
       - echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | tee /etc/apt/sources.list.d/trivy.list
       - apt-get update -y
@@ -30,16 +29,13 @@ phases:
 
   build:
     commands:
-      - chmod +x node_modules/.bin/vite
       - echo "Building frontend..."
       - npm run build
 
   post_build:
     commands:
       - echo "Uploading to S3"
-      # 1) push all static assets with long cache
       - aws s3 sync dist/ s3://lostfound-app/ --delete --exclude "index.html" --cache-control "public,max-age=31536000,immutable"
-      # 2) upload index.html with short cache so updates go live quickly
       - aws s3 cp dist/index.html s3://lostfound-app/index.html --cache-control "no-cache"
 
 artifacts:
