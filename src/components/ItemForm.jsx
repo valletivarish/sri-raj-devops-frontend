@@ -30,12 +30,34 @@ export default function ItemForm({ onCreated }) {
         } else {
           removeError()
         }
-      } else if (name === 'description' && trimmed.length > 2000) {
-        newErrors.description = 'Description must not exceed 2000 characters'
-      } else if (name === 'tags' && trimmed.length > 500) {
-        newErrors.tags = 'Tags must not exceed 500 characters'
-      } else if (name === 'location' && trimmed.length > 200) {
-        newErrors.location = 'Location must not exceed 200 characters'
+      } else if (name === 'description') {
+        const d = trimmed?.trim() || ''
+        if (!d) {
+          newErrors.description = 'Description is required'
+        } else if (d.length < 3) {
+          newErrors.description = 'Description must be between 3 and 2000 characters'
+        } else if (d.length > 2000) {
+          newErrors.description = 'Description must be between 3 and 2000 characters'
+        } else {
+          removeError()
+        }
+      } else if (name === 'tags') {
+        if (trimmed && trimmed.length > 500) {
+          newErrors.tags = 'Tags must not exceed 500 characters'
+        } else {
+          removeError()
+        }
+      } else if (name === 'location') {
+        const loc = trimmed?.trim() || ''
+        if (!loc) {
+          newErrors.location = 'Location is required'
+        } else if (loc.length < 3) {
+          newErrors.location = 'Location must be between 3 and 200 characters'
+        } else if (loc.length > 200) {
+          newErrors.location = 'Location must be between 3 and 200 characters'
+        } else {
+          removeError()
+        }
       } else {
         removeError()
       }
@@ -53,8 +75,10 @@ export default function ItemForm({ onCreated }) {
       newErrors.title = 'Title must be between 3 and 200 characters'
     }
     
-    if (form.description && form.description.length > 2000) {
-      newErrors.description = 'Description must not exceed 2000 characters'
+    if (!form.description || !form.description.trim()) {
+      newErrors.description = 'Description is required'
+    } else if (form.description.trim().length < 3 || form.description.trim().length > 2000) {
+      newErrors.description = 'Description must be between 3 and 2000 characters'
     }
     
     if (!form.type) {
@@ -67,8 +91,10 @@ export default function ItemForm({ onCreated }) {
       newErrors.tags = 'Tags must not exceed 500 characters'
     }
     
-    if (form.location && form.location.length > 200) {
-      newErrors.location = 'Location must not exceed 200 characters'
+    if (!form.location || !form.location.trim()) {
+      newErrors.location = 'Location is required'
+    } else if (form.location.trim().length < 3 || form.location.trim().length > 200) {
+      newErrors.location = 'Location must be between 3 and 200 characters'
     }
     
     setErrors(newErrors)
@@ -205,7 +231,7 @@ export default function ItemForm({ onCreated }) {
           maxLength={2000}
         />
         {errors.description && <div style={{color: 'var(--accent)', fontSize: '14px', marginTop: '4px'}}>{errors.description}</div>}
-        <div style={{color: 'var(--muted)', fontSize: '12px', marginTop: '4px'}}>Max 2000 characters</div>
+        <div style={{color: 'var(--muted)', fontSize: '12px', marginTop: '4px'}}>3-2000 characters</div>
       </div>
       <div className="row">
         <div style={{flex:1}}>
@@ -241,7 +267,7 @@ export default function ItemForm({ onCreated }) {
           maxLength={200}
         />
         {errors.location && <div style={{color: 'var(--accent)', fontSize: '14px', marginTop: '4px'}}>{errors.location}</div>}
-        <div style={{color: 'var(--muted)', fontSize: '12px', marginTop: '4px'}}>Max 200 characters</div>
+        <div style={{color: 'var(--muted)', fontSize: '12px', marginTop: '4px'}}>3-200 characters</div>
       </div>
       <div>
         <label htmlFor="images">Images</label>
