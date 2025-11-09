@@ -306,7 +306,6 @@ export default function TopBar() {
                   <>
                     <button className="btn" onClick={openAdmin}>Continue as Admin</button>
                     <button className="btn ghost" onClick={openUser}>Continue as User</button>
-                    <button className="btn" style={{marginLeft: 8}} onClick={() => setRegisterOpen(true)}>Register</button>
                   </>
                 )
               }
