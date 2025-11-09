@@ -11,7 +11,7 @@ phases:
   pre_build:
     commands:
       - echo "Fetching API URL from Secrets Manager"
-      - export VITE_API_BASE_URL=$(aws secretsmanager get-secret-value --region eu-west-1 --secret-id lostfound/env --query SecretString --output text | jq -r '. | fromjson | .API_BASE_URL')
+      - export VITE_API_BASE_URL=$(aws secretsmanager get-secret-value --region eu-west-1 --secret-id lostfound/env --query SecretString --output text | jq -r 'fromjson | .API_BASE_URL')
       
       - echo "Running npm audit"
       - npm audit --audit-level=high || true
