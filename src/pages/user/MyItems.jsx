@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import { useAuth } from '../../context/AuthContext.jsx'
 import Table from '../../components/Table'
 import Card from '../../components/Card'
-import { getMyItems } from '../../services/api'
+import { deleteItem, getMyItems } from '../../services/api'
 
 export default function MyItems() {
   const { user } = useAuth()
@@ -40,6 +40,20 @@ export default function MyItems() {
     setFilters({ type: '', status: '', q: '' })
   }
 
+  async function handleDelete(id) {
+    const confirmed = window.confirm('Are you sure you want to delete this item? This action cannot be undone.')
+    if (!confirmed) return
+
+    try {
+      await deleteItem(id)
+      toast.success('Item deleted')
+      load()
+    } catch (e) {
+      console.error('Delete failed', e)
+      toast.error('Failed to delete item')
+    }
+  }
+
   const columns = [
     { key: 'id', title: 'ID' },
     { key: 'title', title: 'Title' },
@@ -52,6 +66,7 @@ export default function MyItems() {
         <div className="row" style={{ gap: 8 }}>
           <a className="btn ghost" href={`/items/${r.id}`}>View</a>
           <Link className="btn ghost" to={`/user/items/${r.id}/edit`}>Edit</Link>
+          <button className="btn danger" type="button" onClick={() => handleDelete(r.id)}>Delete</button>
         </div>
       )
     },
