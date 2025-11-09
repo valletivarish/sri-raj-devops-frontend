@@ -10,14 +10,38 @@ export default function ItemForm({ onCreated }) {
 
   function onChange(e) { 
     const { name, value } = e.target
-    setForm(prev => ({...prev, [name]: value}))
-    if (errors[name]) {
-      setErrors(prev => {
-        const newErrors = { ...prev }
+    const trimmed = typeof value === 'string' ? value.slice(0, e.target.maxLength || value.length) : value
+
+    setForm(prev => ({...prev, [name]: trimmed}))
+
+    setErrors(prev => {
+      const newErrors = { ...prev }
+
+      const removeError = () => {
         delete newErrors[name]
-        return newErrors
-      })
-    }
+      }
+
+      if (name === 'title') {
+        const t = trimmed?.trim() || ''
+        if (!t) {
+          newErrors.title = 'Title is required'
+        } else if (t.length < 3) {
+          newErrors.title = 'Title must be between 3 and 200 characters'
+        } else {
+          removeError()
+        }
+      } else if (name === 'description' && trimmed.length > 2000) {
+        newErrors.description = 'Description must not exceed 2000 characters'
+      } else if (name === 'tags' && trimmed.length > 500) {
+        newErrors.tags = 'Tags must not exceed 500 characters'
+      } else if (name === 'location' && trimmed.length > 200) {
+        newErrors.location = 'Location must not exceed 200 characters'
+      } else {
+        removeError()
+      }
+
+      return newErrors
+    })
   }
 
   function validateForm() {
@@ -25,8 +49,8 @@ export default function ItemForm({ onCreated }) {
     
     if (!form.title || !form.title.trim()) {
       newErrors.title = 'Title is required'
-    } else if (form.title.trim().length < 1 || form.title.trim().length > 200) {
-      newErrors.title = 'Title must be between 1 and 200 characters'
+    } else if (form.title.trim().length < 3 || form.title.trim().length > 200) {
+      newErrors.title = 'Title must be between 3 and 200 characters'
     }
     
     if (form.description && form.description.length > 2000) {
@@ -167,7 +191,7 @@ export default function ItemForm({ onCreated }) {
           maxLength={200}
         />
         {errors.title && <div style={{color: 'var(--accent)', fontSize: '14px', marginTop: '4px'}}>{errors.title}</div>}
-        <div style={{color: 'var(--muted)', fontSize: '12px', marginTop: '4px'}}>1-200 characters</div>
+        <div style={{color: 'var(--muted)', fontSize: '12px', marginTop: '4px'}}>3-200 characters</div>
       </div>
       <div>
         <label htmlFor="description">Description</label>
