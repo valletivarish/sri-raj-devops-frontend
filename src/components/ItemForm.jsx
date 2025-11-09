@@ -1,12 +1,24 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
-import { createItem, uploadImage, getItemById } from '../services/api'
+import { createItem, uploadImage, getItemById, updateItem } from '../services/api'
 
-export default function ItemForm({ onCreated }) {
+export default function ItemForm({ mode = 'create', itemId, initialData, onCreated, onUpdated }) {
   const [form, setForm] = useState({ title:'', description:'', type:'LOST', tags:'', location:'' })
   const [files, setFiles] = useState([])
   const [uploading, setUploading] = useState(false)
   const [errors, setErrors] = useState({})
+
+  useEffect(() => {
+    if (initialData) {
+      setForm({
+        title: initialData.title || '',
+        description: initialData.description || '',
+        type: initialData.type || 'LOST',
+        tags: initialData.tags || '',
+        location: initialData.location || ''
+      })
+    }
+  }, [initialData])
 
   function onChange(e) { 
     const { name, value } = e.target
@@ -172,7 +184,7 @@ export default function ItemForm({ onCreated }) {
         tags: form.tags ? form.tags.trim() : null,
         location: form.location ? form.location.trim() : null
       }
-      const created = await createItem(itemData)
+      const result = mode === 'edit' && itemId ? await updateItem(itemId, itemData) : await createItem(itemData)
       
       if (files.length > 0) {
         const renamedFiles = files.map((file, index) => 
@@ -180,14 +192,28 @@ export default function ItemForm({ onCreated }) {
         )
         
         for (const f of renamedFiles) {
-          await uploadImage(f, created.id)
+          await uploadImage(f, result.id)
         }
-        const updated = await getItemById(created.id)
-        onCreated?.(updated)
+        const latest = await getItemById(result.id)
+        if (mode === 'edit') {
+          onUpdated?.(latest)
+        } else {
+          onCreated?.(latest)
+        }
       } else {
-        onCreated?.(created)
+        if (mode === 'edit') {
+          onUpdated?.(result)
+        } else {
+          onCreated?.(result)
+        }
       }
       setUploading(false)
+      setFiles([])
+      if (mode !== 'edit') {
+        setForm({ title:'', description:'', type:'LOST', tags:'', location:'' })
+      }
+      setErrors({})
+      toast.success(mode === 'edit' ? 'Item updated' : 'Item created')
     } catch (err) {
       setUploading(false)
       if (err.response?.data?.errors) {
@@ -287,7 +313,7 @@ export default function ItemForm({ onCreated }) {
           disabled={uploading || Object.keys(errors).length > 0} 
           type="submit"
         >
-          {uploading ? 'Uploading…' : 'Create'}
+          {uploading ? 'Saving…' : (mode === 'edit' ? 'Update' : 'Create')}
         </button>
       </div>
     </form>

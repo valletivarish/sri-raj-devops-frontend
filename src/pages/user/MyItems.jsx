@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useAuth } from '../../context/AuthContext.jsx'
 import Table from '../../components/Table'
 import Card from '../../components/Card'
-import { deleteItem, getMyItems } from '../../services/api'
+import { getMyItems } from '../../services/api'
 
 export default function MyItems() {
   const { user } = useAuth()
@@ -44,7 +45,16 @@ export default function MyItems() {
     { key: 'title', title: 'Title' },
     { key: 'type', title: 'Type' },
     { key: 'status', title: 'Status' },
-    { key: 'actions', title: 'Actions', render: (r) => <a className="btn ghost" href={`/items/${r.id}`}>View</a> },
+    {
+      key: 'actions',
+      title: 'Actions',
+      render: (r) => (
+        <div className="row" style={{ gap: 8 }}>
+          <a className="btn ghost" href={`/items/${r.id}`}>View</a>
+          <Link className="btn ghost" to={`/user/items/${r.id}/edit`}>Edit</Link>
+        </div>
+      )
+    },
   ]
 
   return (

@@ -21,6 +21,7 @@ import UserMyItems from './pages/user/MyItems.jsx'
 import UserAddItem from './pages/user/AddItem.jsx'
 import UserMyReports from './pages/user/MyReports.jsx'
 import UserProfile from './pages/user/Profile.jsx'
+import UserEditItem from './pages/user/EditItem.jsx'
 
 const router = createBrowserRouter([
   {
@@ -50,6 +51,7 @@ const router = createBrowserRouter([
           { path: 'dashboard', element: <UserDashboard /> },
           { path: 'all-items', element: <Home /> },
           { path: 'items', element: <UserMyItems /> },
+          { path: 'items/:id/edit', element: <UserEditItem /> },
           { path: 'add-item', element: <UserAddItem /> },
           { path: 'reports', element: <UserMyReports /> },
           { path: 'profile', element: <UserProfile /> },
